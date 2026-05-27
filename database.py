@@ -11,22 +11,15 @@ class DatabaseManager:
         self._connect()
         self._create_tables()
 
-    # ------------------------------------------------------------------ #
-    #  Connection helpers                                                   #
-    # ------------------------------------------------------------------ #
 
     def _connect(self) -> None:
         self._conn = sqlite3.connect(self._db_path)
-        self._conn.row_factory = sqlite3.Row          # access columns by name
+        self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
 
     def close(self) -> None:
         if self._conn:
             self._conn.close()
-
-    # ------------------------------------------------------------------ #
-    #  Schema creation                                                      #
-    # ------------------------------------------------------------------ #
 
     def _create_tables(self) -> None:
         sql_statements = [
@@ -68,12 +61,8 @@ class DatabaseManager:
             self._conn.execute(stmt)
         self._conn.commit()
 
-    # ------------------------------------------------------------------ #
-    #  Student operations                                                   #
-    # ------------------------------------------------------------------ #
-
     def add_student(self, student: Student) -> bool:
-        """INSERT a student. Returns False if faculty number already exists."""
+
         try:
             self._conn.execute(
                 "INSERT INTO students (faculty_number, name, age) VALUES (?, ?, ?)",
@@ -85,7 +74,6 @@ class DatabaseManager:
             return False
 
     def get_all_students(self) -> list[Student]:
-        """SELECT all students and reconstruct Student objects with their grades."""
         rows = self._conn.execute(
             "SELECT faculty_number, name, age FROM students ORDER BY name"
         ).fetchall()
@@ -93,7 +81,6 @@ class DatabaseManager:
         students: list[Student] = []
         for row in rows:
             s = Student(row["name"], row["age"], row["faculty_number"])
-            # Load grades into the in-memory list
             grade_rows = self._conn.execute(
                 "SELECT grade FROM grades WHERE faculty_number = ?",
                 (row["faculty_number"],),
@@ -104,7 +91,6 @@ class DatabaseManager:
         return students
 
     def search_students(self, query: str) -> list[Student]:
-        """Search students by name (partial, case-insensitive) or faculty number."""
         like_query = f"%{query}%"
         rows = self._conn.execute(
             """
@@ -128,19 +114,12 @@ class DatabaseManager:
         return students
 
     def delete_student(self, faculty_number: str) -> bool:
-        """DELETE a student and all related records."""
         cursor = self._conn.execute(
             "DELETE FROM students WHERE faculty_number = ?", (faculty_number,)
         )
         self._conn.commit()
         return cursor.rowcount > 0
-
-    # ------------------------------------------------------------------ #
-    #  Course operations                                                    #
-    # ------------------------------------------------------------------ #
-
     def add_course(self, name: str, teacher_name: str = "TBA") -> Optional[Course]:
-        """INSERT a course. Returns the new Course or None if name already exists."""
         try:
             cursor = self._conn.execute(
                 "INSERT INTO courses (name, teacher_name) VALUES (?, ?)",
@@ -152,14 +131,12 @@ class DatabaseManager:
             return None
 
     def get_all_courses(self) -> list[Course]:
-        """SELECT all courses."""
         rows = self._conn.execute(
             "SELECT id, name, teacher_name FROM courses ORDER BY name"
         ).fetchall()
         courses = []
         for row in rows:
             c = Course(row["id"], row["name"], row["teacher_name"])
-            # Load enrolled students
             enr_rows = self._conn.execute(
                 "SELECT faculty_number FROM enrollments WHERE course_id = ?",
                 (row["id"],),
@@ -184,12 +161,7 @@ class DatabaseManager:
         self._conn.commit()
         return cursor.rowcount > 0
 
-    # ------------------------------------------------------------------ #
-    #  Enrollment operations                                                #
-    # ------------------------------------------------------------------ #
-
     def enroll_student(self, faculty_number: str, course_id: int) -> bool:
-        """Enroll a student in a course (INSERT into enrollments)."""
         try:
             self._conn.execute(
                 "INSERT INTO enrollments (faculty_number, course_id) VALUES (?, ?)",
@@ -198,19 +170,12 @@ class DatabaseManager:
             self._conn.commit()
             return True
         except sqlite3.IntegrityError:
-            return False   # already enrolled
-
-    # ------------------------------------------------------------------ #
-    #  Grade operations                                                     #
-    # ------------------------------------------------------------------ #
+            return False
 
     def assign_grade(
         self, faculty_number: str, course_id: int, grade: float
     ) -> bool:
-        """
-        INSERT or UPDATE a grade for a student in a course.
-        A student can only have one grade per course (UPDATE replaces it).
-        """
+
         existing = self._conn.execute(
             "SELECT id FROM grades WHERE faculty_number = ? AND course_id = ?",
             (faculty_number, course_id),
@@ -230,7 +195,6 @@ class DatabaseManager:
         return True
 
     def get_grades_for_student(self, faculty_number: str) -> list[dict]:
-        """Return all grade records for a specific student."""
         rows = self._conn.execute(
             """
             SELECT c.name AS course_name, g.grade
@@ -244,7 +208,6 @@ class DatabaseManager:
         return [{"course": row["course_name"], "grade": row["grade"]} for row in rows]
 
     def get_average_grade(self, faculty_number: str) -> Optional[float]:
-        """Compute AVG grade for a student using SQL aggregation."""
         row = self._conn.execute(
             "SELECT AVG(grade) AS avg FROM grades WHERE faculty_number = ?",
             (faculty_number,),

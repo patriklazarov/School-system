@@ -17,7 +17,7 @@ class Student(Person):
     def __init__(self, name: str, age: int, faculty_number: str):
         super().__init__(name, age)
         self._faculty_number = faculty_number
-        self._grades: list[float] = []   # in-memory cache; DB is the source of truth
+        self._grades: list[float] = []
 
     @property
     def faculty_number(self) -> str:
@@ -28,23 +28,16 @@ class Student(Person):
         return list(self._grades)
 
     def add_grade(self, grade: float) -> None:
-        """Add a grade to the in-memory list (use DatabaseManager to persist)."""
         if not (2.0 <= grade <= 6.0):
             raise ValueError("Grade must be between 2.00 and 6.00 (Bulgarian scale).")
         self._grades.append(grade)
 
     def average_grade(self) -> float | None:
-        """Return the average of all in-memory grades, or None if no grades."""
         if not self._grades:
             return None
         return round(sum(self._grades) / len(self._grades), 2)
 
     def passed(self) -> bool | None:
-        """
-        Determine pass/fail status.
-        Returns None when no grades are available.
-        Grade >= 3 → Passed   |   Grade < 3 → Failed
-        """
         avg = self.average_grade()
         if avg is None:
             return None
@@ -77,7 +70,7 @@ class Course:
         self._course_id = course_id
         self._name = name
         self._teacher_name = teacher_name
-        self._enrolled_students: list[str] = []  # list of faculty numbers
+        self._enrolled_students: list[str] = []
 
     @property
     def course_id(self) -> int:

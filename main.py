@@ -72,8 +72,7 @@ def display_students(db: DatabaseManager) -> None:
     for idx, s in enumerate(students, start=1):
         avg   = s.average_grade()
         avg_s = f"{avg:.2f}" if avg is not None else "N/A"
-        
-        # Conditional: pass / fail / no grades
+
         if s.passed() is None:
             status = "No grades"
         elif s.passed():
@@ -137,7 +136,6 @@ def assign_grade(db: DatabaseManager) -> None:
         avg = db.get_average_grade(fn)
         success(f"Grade {grade:.2f} recorded.")
         if avg is not None:
-            # Conditional: pass / fail based on average
             status = "PASSED ✓" if avg >= 3.0 else "FAILED ✗"
             info(f"New average for FN {fn}: {avg:.2f}  →  {status}")
     else:
